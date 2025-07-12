@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>东方财富全A股票曲线图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .chart-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            width: 100%;
+            max-width: 1000px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            display: block;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            width: 100%; /* Make canvas responsive */
+            height: auto; /* Maintain aspect ratio */
+        }
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10;
+            white-space: nowrap;
+        }
+        .chart-title {
+            font-size: 1.75rem; /* text-3xl */
+            font-weight: 700; /* font-bold */
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .chart-info {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <h1 class="chart-title">东方财富全A股票走势图</h1>
+        <p class="chart-info">数据日期: 2025年7月11日</p>
+        <canvas id="stockChart"></canvas>
+        <div id="tooltip" class="rounded-md"></div>
+    </div>
+
+    <script>
+        // 股票数据，直接从用户提供的数据中提取
+        const stockDataRaw = {"rc":0,"rt":10,"svr":183640814,"lt":1,"full":1,"dlmkts":"","data":{"code":"800000","market":47,"type":7,"status":0,"name":"东方财富全A","decimal":2,"preSettlement":0.0,"preClose":5574.26,"beticks":"33300|34200|54000|34200|41400|46800|54000","trendsTotal":241,"time":1752219581,"kind":2,"prePrice":5574.26,"tradePeriods":{"pre":null,"after":null,"periods":[{"b":202507110930,"e":202507111130},{"b":202507111300,"e":202507111500}]},"hisPrePrices":[{"date":20250711,"prePrice":5574.256}],"trends":["2025-07-11 09:30,5580.47,5580.47,5580.47,5576.36,5580.471","2025-07-11 09:31,5580.47,5581.43,5585.33,5580.47,5582.698","2025-07-11 09:32,5581.15,5578.15,5581.40,5577.08,5581.709","2025-07-11 09:33,5577.72,5576.83,5578.56,5574.90,5580.673","2025-07-11 09:34,5577.14,5575.14,5577.14,5574.34,5579.877","2025-07-11 09:35,5574.98,5572.61,5575.25,5572.39,5579.179","2025-07-11 09:36,5572.79,5572.30,5572.96,5569.34,5578.252","2025-07-11 09:37,5571.79,5573.85,5574.08,5571.79,5577.738","2025-07-11 09:38,5573.91,5575.12,5575.12,5573.02,5577.445","2025-07-11 09:39,5575.48,5579.15,5579.15,5575.48,5577.413","2025-07-11 10:00,5593.60,5594.84,5595.34,5593.60,5581.688","2025-07-11 10:01,5595.24,5596.13,5596.65,5595.12,5582.018","2025-07-11 10:02,5595.70,5592.57,5595.86,5592.57,5582.306","2025-07-11 10:03,5592.97,5596.64,5596.95,5592.97,5582.541","2025-07-11 10:04,5596.32,5596.10,5597.97,5595.59,5582.773","2025-07-11 10:05,5596.07,5601.21,5601.39,5596.07,5583.031","2025-07-11 10:06,5601.47,5604.05,5605.01,5601.18,5583.361","2025-07-11 10:07,5603.89,5605.11,5605.59,5603.84,5583.715","2025-07-11 10:08,5605.19,5603.84,5606.17,5603.55,5584.103","2025-07-11 10:09,5603.90,5605.82,5606.34,5603.80,5584.460","2025-07-11 10:10,5605.53,5603.54,5605.53,5603.31,5584.785","2025-07-11 10:11,5604.13,5609.42,5609.48,5603.92,5585.124","2025-07-11 10:12,5609.73,5607.35,5609.73,5607.13,5585.444","2025-07-11 10:13,5607.06,5606.55,5607.06,5605.29,5585.708","2025-07-11 10:14,5607.60,5606.97,5609.21,5606.57,5585.982","2025-07-11 10:15,5606.90,5600.72,5607.28,5600.72,5586.288","2025-07-11 10:16,5600.49,5603.14,5604.25,5600.47,5586.497","2025-07-11 10:17,5603.58,5605.09,5605.74,5602.70,5586.680","2025-07-11 10:18,5604.98,5596.80,5604.98,5596.80,5586.848","2025-07-11 10:19,5596.61,5594.72,5596.61,5594.56,5586.944","2025-07-11 10:20,5594.71,5600.31,5600.63,5594.71,5587.074","2025-07-11 10:21,5600.07,5600.05,5600.07,5599.01,5587.182","2025-07-11 10:22,5600.55,5601.16,5602.38,5600.55,5587.301","2025-07-11 10:23,5601.39,5606.64,5606.92,5601.08,5587.469","2025-07-11 10:24,5606.44,5610.85,5611.60,5606.44,5587.745","2025-07-11 10:25,5610.49,5610.78,5611.10,5608.92,5587.981","2025-07-11 10:26,5611.25,5610.12,5613.32,5610.12,5588.240","2025-07-11 10:27,5609.82,5605.70,5609.82,5605.70,5588.423","2025-07-11 10:28,5605.88,5603.36,5605.88,5603.25,5588.559","2025-07-11 10:29,5603.06,5604.86,5605.33,5603.06,5588.681","2025-07-11 10:30,5604.47,5608.37,5608.37,5602.52,5588.811","2025-07-11 10:31,5608.74,5615.60,5615.60,5608.09,5589.033","2025-07-11 10:32,5615.97,5617.63,5618.41,5615.28,5589.314","2025-07-11 10:33,5617.73,5615.32,5617.79,5615.16,5589.560","2025-07-11 10:34,5615.31,5613.34,5615.31,5613.14,5589.728","2025-07-11 10:35,5613.50,5615.14,5615.62,5613.36,5589.890","2025-07-11 10:36,5615.07,5612.60,5615.07,5612.54,5590.049","2025-07-11 10:37,5612.18,5613.99,5613.99,5611.82,5590.197","2025-07-11 10:38,5614.91,5619.53,5619.53,5614.81,5590.435","2025-07-11 10:39,5619.35,5621.67,5622.00,5618.88,5590.688","2025-07-11 10:40,5621.60,5616.61,5621.60,5616.61,5590.895","2025-07-11 10:41,5616.59,5614.58,5616.59,5614.45,5591.057","2025-07-11 10:42,5614.59,5617.99,5619.16,5614.17,5591.225","2025-07-11 10:43,5618.59,5616.18,5618.59,5615.95,5591.387","2025-07-11 10:44,5616.44,5615.69,5616.51,5614.90,5591.521","2025-07-11 10:45,5616.21,5619.71,5619.71,5615.85,5591.690","2025-07-11 10:46,5619.93,5616.89,5620.39,5616.89,5591.866","2025-07-11 10:47,5616.69,5614.47,5616.69,5614.41,5591.996","2025-07-11 10:48,5614.58,5614.58,5615.48,5614.44,5592.124","2025-07-11 10:49,5614.40,5612.08,5614.40,5612.08,5592.241","2025-07-11 10:50,5611.92,5610.55,5612.62,5610.55,5592.346","2025-07-11 10:51,5610.78,5606.10,5610.78,5606.10,5592.453","2025-07-11 10:52,5606.21,5605.75,5606.62,5605.55,5592.525","2025-07-11 10:53,5605.80,5604.70,5605.92,5604.46,5592.585","2025-07-11 10:54,5605.26,5608.37,5608.37,5604.82,5592.660","2025-07-11 10:55,5608.35,5606.47,5608.35,5606.15,5592.735","2025-07-11 10:56,5606.38,5604.95,5606.38,5604.63,5592.794","2025-07-11 10:57,5604.88,5604.82,5605.12,5604.30,5592.848","2025-07-11 10:58,5604.84,5603.55,5604.96,5603.54,5592.894","2025-07-11 10:59,5603.82,5603.13,5603.82,5602.94,5592.941","2025-07-11 11:00,5603.29,5602.04,5603.29,5602.00,5592.987","2025-07-11 11:01,5601.88,5599.95,5601.99,5599.81,5593.031","2025-07-11 11:02,5600.14,5601.59,5601.77,5599.94,5593.069","2025-07-11 11:03,5601.47,5601.71,5601.71,5600.60,5593.103","2025-07-11 11:04,5601.81,5602.05,5602.32,5601.61,5593.138","2025-07-11 11:05,5602.29,5601.80,5602.29,5601.13,5593.176","2025-07-11 11:06,5601.72,5602.22,5602.59,5601.62,5593.213","2025-07-11 11:07,5602.44,5603.54,5603.54,5602.36,5593.252","2025-07-11 11:08,5603.56,5605.12,5605.12,5603.56,5593.296","2025-07-11 11:09,5605.14,5606.00,5606.00,5604.77,5593.342","2025-07-11 11:10,5605.88,5608.23,5608.55,5605.63,5593.396","2025-07-11 11:11,5608.06,5608.37,5608.51,5606.52,5593.456","2025-07-11 11:12,5608.44,5609.69,5609.72,5608.23,5593.524","2025-07-11 11:13,5609.91,5608.62,5610.16,5608.45,5593.596","2025-07-11 11:14,5608.88,5609.31,5609.44,5608.84,5593.658","2025-07-11 11:15,5609.00,5606.52,5609.55,5606.52,5593.740","2025-07-11 11:16,5606.25,5606.09,5606.53,5605.62,5593.794","2025-07-11 11:17,5606.07,5607.64,5607.64,5605.84,5593.852","2025-07-11 11:18,5607.65,5609.60,5610.07,5607.65,5593.925","2025-07-11 11:19,5609.54,5609.31,5609.81,5609.04,5593.985","2025-07-11 11:20,5609.47,5611.30,5611.52,5609.06,5594.051","2025-07-11 11:21,5612.02,5610.75,5613.16,5610.71,5594.153","2025-07-11 11:22,5610.31,5611.34,5612.01,5610.14,5594.218","2025-07-11 11:23,5611.72,5610.48,5611.72,5610.48,5594.280","2025-07-11 11:24,5610.62,5611.12,5611.70,5610.35,5594.342","2025-07-11 11:25,5612.21,5614.38,5615.35,5612.04,5594.421","2025-07-11 11:26,5614.56,5619.15,5619.15,5613.63,5594.525","2025-07-11 11:27,5619.00,5621.73,5622.60,5619.00,5594.700","2025-07-11 11:28,5621.46,5624.42,5625.85,5621.46,5594.875","2025-07-11 11:29,5624.23,5626.98,5626.98,5623.93,5595.032","2025-07-11 11:30,5626.67,5628.47,5629.62,5626.63,5595.282","2025-07-11 13:01,5628.47,5634.22,5634.22,5628.47,5596.067","2025-07-11 13:02,5634.12,5636.67,5636.67,5631.89,5596.435","2025-07-11 13:03,5636.54,5637.83,5637.83,5636.11,5596.722","2025-07-11 13:04,5637.73,5638.12,5639.71,5637.50,5596.993","2025-07-11 13:05,5638.80,5634.71,5639.00,5634.71,5597.249","2025-07-11 13:06,5634.65,5638.21,5638.21,5633.78,5597.464","2025-07-11 13:07,5638.50,5641.11,5642.45,5637.14,5597.773","2025-07-11 13:08,5641.12,5638.72,5641.85,5638.72,5598.041","2025-07-11 13:09,5638.63,5638.96,5639.95,5638.23,5598.266","2025-07-11 13:10,5639.18,5635.97,5639.21,5635.70,5598.494","2025-07-11 13:11,5635.88,5633.41,5635.93,5633.41,5598.684","2025-07-11 13:12,5633.58,5632.12,5634.78,5632.03,5598.847","2025-07-11 13:13,5632.20,5630.38,5632.20,5630.38,5599.007","2025-07-11 13:14,5630.20,5627.98,5630.40,5627.87,5599.127","2025-07-11 13:15,5627.34,5625.01,5627.34,5624.87,5599.250","2025-07-11 13:16,5624.64,5622.87,5624.92,5622.87,5599.365","2025-07-11 13:17,5622.71,5626.78,5626.82,5622.69,5599.483","2025-07-11 13:18,5626.69,5624.07,5626.97,5623.89,5599.591","2025-07-11 13:19,5624.82,5623.90,5625.18,5623.47,5599.685","2025-07-11 13:20,5623.98,5624.24,5624.88,5623.95,5599.776","2025-07-11 13:21,5624.17,5623.46,5624.17,5622.42,5599.867","2025-07-11 13:22,5624.14,5626.04,5626.62,5623.72,5599.973","2025-07-11 13:23,5625.80,5622.79,5625.94,5622.50,5600.075","2025-07-11 13:24,5622.92,5621.80,5622.92,5620.65,5600.169","2025-07-11 13:25,5622.03,5623.31,5623.31,5621.61,5600.252","2025-07-11 13:26,5622.81,5625.52,5625.60,5622.28,5600.347","2025-07-11 13:27,5625.37,5624.51,5625.89,5624.51,5600.442","2025-07-11 13:28,5624.75,5623.85,5625.12,5623.22,5600.535","2025-07-11 13:29,5623.82,5621.44,5623.82,5621.44,5600.621","2025-07-11 13:30,5621.54,5621.52,5622.47,5621.27,5600.696","2025-07-11 13:31,5621.53,5626.07,5626.07,5621.50,5600.799","2025-07-11 13:32,5626.00,5625.52,5626.11,5624.68,5600.914","2025-07-11 13:33,5625.40,5624.50,5625.96,5624.50,5601.019","2025-07-11 13:34,5624.93,5622.82,5624.93,5622.82,5601.115","2025-07-11 13:35,5623.29,5624.24,5625.04,5622.72,5601.206","2025-07-11 13:36,5623.95,5621.97,5624.50,5621.61,5601.291","2025-07-11 13:37,5621.31,5617.07,5621.31,5617.07,5601.375","2025-07-11 13:38,5617.18,5617.36,5619.32,5617.17,5601.439","2025-07-11 13:39,5617.87,5618.05,5618.17,5616.49,5601.497","2025-07-11 13:40,5618.16,5614.36,5618.16,5614.19,5601.557","2025-07-11 13:41,5614.10,5617.58,5618.23,5613.84,5601.612","2025-07-11 13:42,5617.60,5624.56,5624.56,5617.55,5601.705","2025-07-11 13:43,5624.23,5622.73,5624.94,5622.47,5601.778","2025-07-11 13:44,5622.62,5622.66,5623.92,5622.47,5601.842","2025-07-11 13:45,5622.24,5625.54,5625.54,5622.24,5601.910","2025-07-11 13:46,5626.11,5624.15,5626.11,5624.15,5601.978","2025-07-11 13:47,5624.09,5626.21,5626.47,5623.93,5602.053","2025-07-11 13:48,5626.18,5625.69,5626.18,5625.20,5602.127","2025-07-11 13:49,5625.96,5630.11,5630.11,5625.81,5602.220","2025-07-11 13:50,5630.17,5631.12,5632.46,5630.17,5602.359","2025-07-11 13:51,5630.54,5625.53,5630.54,5625.53,5602.463","2025-07-11 13:52,5625.55,5623.25,5625.98,5623.25,5602.537","2025-07-11 13:53,5623.19,5620.03,5623.19,5620.03,5602.596","2025-07-11 13:54,5619.52,5618.11,5619.71,5617.74,5602.651","2025-07-11 13:55,5618.02,5617.81,5619.09,5617.68,5602.698","2025-07-11 13:56,5617.84,5618.74,5619.26,5617.51,5602.742","2025-07-11 13:57,5618.44,5617.65,5618.83,5617.65,5602.784","2025-07-11 13:58,5617.60,5616.98,5617.99,5616.98,5602.825","2025-07-11 13:59,5616.70,5614.18,5616.83,5614.18,5602.864","2025-07-11 14:00,5614.15,5615.67,5616.15,5613.57,5602.907","2025-07-11 14:01,5615.97,5614.02,5616.25,5613.74,5602.947","2025-07-11 14:02,5613.63,5612.16,5613.63,5612.14,5602.981","2025-07-11 14:03,5612.06,5611.61,5612.66,5611.61,5603.010","2025-07-11 14:04,5611.52,5613.78,5614.61,5611.34,5603.048","2025-07-11 14:05,5613.69,5612.11,5613.69,5612.03,5603.076","2025-07-11 14:06,5612.17,5613.47,5614.21,5611.99,5603.107","2025-07-11 14:07,5614.07,5609.91,5614.07,5609.91,5603.136","2025-07-11 14:08,5609.78,5608.62,5609.88,5608.06,5603.157","2025-07-11 14:09,5608.55,5611.28,5611.35,5607.82,5603.179","2025-07-11 14:10,5612.13,5610.45,5612.31,5610.18,5603.202","2025-07-11 14:11,5610.54,5609.36,5610.55,5609.10,5603.222","2025-07-11 14:12,5609.38,5608.85,5609.45,5608.63,5603.239","2025-07-11 14:13,5608.66,5609.89,5610.77,5608.66,5603.259","2025-07-11 14:14,5609.62,5608.62,5610.07,5608.62,5603.276","2025-07-11 14:15,5608.72,5612.22,5612.22,5608.33,5603.296","2025-07-11 14:16,5612.55,5615.43,5615.43,5612.55,5603.327","2025-07-11 14:17,5615.00,5616.74,5617.46,5615.00,5603.364","2025-07-11 14:18,5616.89,5616.69,5617.37,5616.29,5603.400","2025-07-11 14:19,5617.07,5616.32,5617.81,5616.01,5603.434","2025-07-11 14:20,5616.30,5615.68,5617.01,5615.68,5603.464","2025-07-11 14:21,5615.73,5613.67,5615.94,5613.53,5603.496","2025-07-11 14:22,5613.92,5610.96,5613.92,5610.96,5603.521","2025-07-11 14:23,5611.37,5610.04,5611.86,5610.04,5603.539","2025-07-11 14:24,5610.29,5610.28,5611.08,5610.28,5603.555","2025-07-11 14:25,5610.11,5611.43,5612.34,5610.11,5603.574","2025-07-11 14:26,5611.38,5611.16,5611.50,5610.83,5603.592","2025-07-11 14:27,5611.45,5610.99,5612.18,5610.77,5603.613","2025-07-11 14:28,5611.08,5610.43,5611.16,5609.62,5603.631","2025-07-11 14:29,5610.58,5610.93,5611.30,5610.54,5603.650","2025-07-11 14:30,5610.75,5610.45,5610.92,5610.20,5603.669","2025-07-11 14:31,5610.25,5611.95,5612.27,5610.25,5603.695","2025-07-11 14:32,5612.16,5610.97,5612.40,5610.82,5603.718","2025-07-11 14:33,5611.04,5610.18,5611.40,5610.18,5603.738","2025-07-11 14:34,5610.32,5609.75,5610.49,5609.67,5603.757","2025-07-11 14:35,5609.77,5609.82,5610.38,5609.55,5603.775","2025-07-11 14:36,5609.68,5607.79,5609.68,5607.79,5603.792","2025-07-11 14:37,5607.67,5603.98,5607.67,5603.98,5603.802","2025-07-11 14:38,5604.05,5601.78,5604.05,5601.77,5603.797","2025-07-11 14:39,5601.38,5597.27,5601.38,5597.27,5603.775","2025-07-11 14:40,5597.03,5596.35,5598.02,5596.22,5603.745","2025-07-11 14:41,5596.09,5594.54,5596.09,5594.54,5603.702","2025-07-11 14:42,5594.92,5593.64,5594.99,5593.64,5603.661","2025-07-11 14:43,5593.85,5594.40,5595.37,5593.85,5603.622","2025-07-11 14:44,5594.70,5594.09,5595.50,5594.09,5603.588","2025-07-11 14:45,5593.73,5592.39,5594.32,5592.37,5603.545","2025-07-11 14:46,5592.71,5588.90,5592.71,5588.90,5603.478","2025-07-11 14:47,5588.36,5592.17,5592.17,5588.18,5603.405","2025-07-11 14:48,5591.66,5592.27,5592.60,5591.66,5603.361","2025-07-11 14:49,5592.63,5593.53,5593.53,5591.90,5603.317","2025-07-11 14:50,5593.46,5593.71,5594.38,5593.46,5603.280","2025-07-11 14:51,5593.69,5593.82,5594.30,5593.21,5603.233","2025-07-11 14:52,5594.11,5594.41,5594.52,5593.85,5603.192","2025-07-11 14:53,5594.39,5595.37,5595.76,5594.39,5603.156","2025-07-11 14:54,5595.70,5595.20,5595.94,5594.80,5603.118","2025-07-11 14:55,5595.22,5594.50,5595.56,5594.33,5603.074","2025-07-11 14:56,5594.27,5595.30,5595.31,5594.13,5603.021","2025-07-11 14:57,5595.05,5595.28,5595.64,5594.29,5602.962","2025-07-11 14:58,5596.11,5596.64,5596.71,5596.11,5602.956","2025-07-11 14:59,5596.64,5596.64,5596.64,5596.64,5602.956","2025-07-11 15:00,5596.64,5588.51,5596.64,5588.51,5602.819"]}};
+
+        let chart; // Declare chart globally to be accessible by resize handler
+
+        function drawChart() {
+            const canvas = document.getElementById('stockChart');
+            const ctx = canvas.getContext('2d');
+            const tooltip = document.getElementById('tooltip');
+
+            // Set canvas dimensions based on container width
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 48; // Account for padding
+            canvas.height = Math.min(canvas.width * 0.6, 400); // Maintain aspect ratio, max height 400px
+
+            const data = stockDataRaw.data.trends;
+            const parsedData = data.map(item => {
+                const parts = item.split(',');
+                const dateTimeStr = parts[0];
+                const closePrice = parseFloat(parts[1]); // Using the second value as closing price
+                return {
+                    time: new Date(dateTimeStr.replace(/-/g, '/')), // Format for Date object
+                    price: closePrice
+                };
+            });
+
+            // Filter data to only include valid trading periods
+            const tradePeriods = stockDataRaw.data.tradePeriods.periods;
+            const filteredData = parsedData.filter(item => {
+                const itemTime = item.time.getHours() * 100 + item.time.getMinutes();
+                return tradePeriods.some(period => {
+                    const periodStart = parseInt(String(period.b).slice(-4));
+                    const periodEnd = parseInt(String(period.e).slice(-4));
+                    return itemTime >= periodStart && itemTime <= periodEnd;
+                });
+            });
+
+            if (filteredData.length === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '16px Inter';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('没有可用的股票数据。', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            // Find min/max values for scaling
+            const minPrice = Math.min(...filteredData.map(d => d.price));
+            const maxPrice = Math.max(...filteredData.map(d => d.price));
+            const minTime = filteredData[0].time.getTime();
+            const maxTime = filteredData[filteredData.length - 1].time.getTime();
+
+            // Define padding for the chart
+            const padding = 60;
+            const chartWidth = canvas.width - 2 * padding;
+            const chartHeight = canvas.height - 2 * padding;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw axes
+            ctx.beginPath();
+            ctx.strokeStyle = '#cbd5e1'; // slate-300
+            ctx.lineWidth = 1;
+
+            // Y-axis
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            // X-axis
+            ctx.moveTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.stroke();
+
+            // Draw Y-axis labels (price)
+            const numYLabels = 5;
+            for (let i = 0; i <= numYLabels; i++) {
+                const price = minPrice + (maxPrice - minPrice) * (i / numYLabels);
+                const y = canvas.height - padding - (price - minPrice) / (maxPrice - minPrice) * chartHeight;
+                ctx.fillStyle = '#64748b'; // slate-600
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'right';
+                ctx.fillText(price.toFixed(2), padding - 10, y + 4);
+
+                // Draw horizontal grid lines
+                ctx.beginPath();
+                ctx.strokeStyle = '#e2e8f0'; // slate-200
+                ctx.lineWidth = 0.5;
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+            }
+
+            // Draw X-axis labels (time)
+            const numXLabels = 5; // Adjust as needed
+            for (let i = 0; i < numXLabels; i++) {
+                const index = Math.floor(i * (filteredData.length - 1) / (numXLabels - 1));
+                const time = filteredData[index].time;
+                const x = padding + (time.getTime() - minTime) / (maxTime - minTime) * chartWidth;
+                ctx.fillStyle = '#64748b'; // slate-600
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'center';
+                const hours = String(time.getHours()).padStart(2, '0');
+                const minutes = String(time.getMinutes()).padStart(2, '0');
+                ctx.fillText(`${hours}:${minutes}`, x, canvas.height - padding + 20);
+
+                // Draw vertical grid lines
+                ctx.beginPath();
+                ctx.strokeStyle = '#e2e8f0'; // slate-200
+                ctx.lineWidth = 0.5;
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, canvas.height - padding);
+                ctx.stroke();
+            }
+
+            // Draw the line chart
+            ctx.beginPath();
+            ctx.strokeStyle = '#3b82f6'; // blue-500
+            ctx.lineWidth = 2;
+
+            filteredData.forEach((d, i) => {
+                const x = padding + (d.time.getTime() - minTime) / (maxTime - minTime) * chartWidth;
+                const y = canvas.height - padding - (d.price - minPrice) / (maxPrice - minPrice) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+
+            // Add circle markers for each data point
+            ctx.fillStyle = '#3b82f6'; // blue-500
+            filteredData.forEach(d => {
+                const x = padding + (d.time.getTime() - minTime) / (maxTime - minTime) * chartWidth;
+                const y = canvas.height - padding - (d.price - minPrice) / (maxPrice - minPrice) * chartHeight;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Tooltip functionality
+            canvas.onmousemove = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                // Check if mouse is within chart area
+                if (mouseX >= padding && mouseX <= canvas.width - padding &&
+                    mouseY >= padding && mouseY <= canvas.height - padding) {
+
+                    let closestPoint = null;
+                    let minDist = Infinity;
+
+                    filteredData.forEach(d => {
+                        const x = padding + (d.time.getTime() - minTime) / (maxTime - minTime) * chartWidth;
+                        const y = canvas.height - padding - (d.price - minPrice) / (maxPrice - minPrice) * chartHeight;
+                        const dist = Math.sqrt(Math.pow(mouseX - x, 2) + Math.pow(mouseY - y, 2));
+
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestPoint = { ...d, chartX: x, chartY: y };
+                        }
+                    });
+
+                    if (closestPoint && minDist < 10) { // Only show tooltip if close enough
+                        tooltip.style.opacity = 1;
+                        tooltip.style.left = `${e.clientX + 15}px`;
+                        tooltip.style.top = `${e.clientY - tooltip.offsetHeight / 2}px`;
+
+                        const time = closestPoint.time;
+                        const hours = String(time.getHours()).padStart(2, '0');
+                        const minutes = String(time.getMinutes()).padStart(2, '0');
+                        const seconds = String(time.getSeconds()).padStart(2, '0');
+
+                        tooltip.innerHTML = `
+                            时间: ${hours}:${minutes}:${seconds}<br>
+                            价格: ${closestPoint.price.toFixed(2)}
+                        `;
+
+                        // Draw highlight circle
+                        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear and redraw
+                        drawChartContent(ctx, filteredData, minPrice, maxPrice, minTime, maxTime, padding, chartWidth, chartHeight); // Redraw everything except tooltip
+                        ctx.beginPath();
+                        ctx.strokeStyle = '#ef4444'; // red-500
+                        ctx.lineWidth = 2;
+                        ctx.arc(closestPoint.chartX, closestPoint.chartY, 6, 0, Math.PI * 2);
+                        ctx.stroke();
+                    } else {
+                        tooltip.style.opacity = 0;
+                        // Redraw to remove highlight if mouse moves away from a point
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        drawChartContent(ctx, filteredData, minPrice, maxPrice, minTime, maxTime, padding, chartWidth, chartHeight);
+                    }
+                } else {
+                    tooltip.style.opacity = 0;
+                    // Redraw to remove highlight if mouse moves out of chart area
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    drawChartContent(ctx, filteredData, minPrice, maxPrice, minTime, maxTime, padding, chartWidth, chartHeight);
+                }
+            };
+
+            canvas.onmouseleave = () => {
+                tooltip.style.opacity = 0;
+                // Redraw to remove highlight when mouse leaves canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawChartContent(ctx, filteredData, minPrice, maxPrice, minTime, maxTime, padding, chartWidth, chartHeight);
+            };
+        }
+
+        // Helper function to redraw chart content (excluding tooltip highlight)
+        function drawChartContent(ctx, data, minPrice, maxPrice, minTime, maxTime, padding, chartWidth, chartHeight) {
+            // Draw axes
+            ctx.beginPath();
+            ctx.strokeStyle = '#cbd5e1'; // slate-300
+            ctx.lineWidth = 1;
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, ctx.canvas.height - padding);
+            ctx.moveTo(padding, ctx.canvas.height - padding);
+            ctx.lineTo(ctx.canvas.width - padding, ctx.canvas.height - padding);
+            ctx.stroke();
+
+            // Draw Y-axis labels (price) and grid lines
+            const numYLabels = 5;
+            for (let i = 0; i <= numYLabels; i++) {
+                const price = minPrice + (maxPrice - minPrice) * (i / numYLabels);
+                const y = ctx.canvas.height - padding - (price - minPrice) / (maxPrice - minPrice) * chartHeight;
+                ctx.fillStyle = '#64748b'; // slate-600
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'right';
+                ctx.fillText(price.toFixed(2), padding - 10, y + 4);
+
+                ctx.beginPath();
+                ctx.strokeStyle = '#e2e8f0'; // slate-200
+                ctx.lineWidth = 0.5;
+                ctx.moveTo(padding, y);
+                ctx.lineTo(ctx.canvas.width - padding, y);
+                ctx.stroke();
+            }
+
+            // Draw X-axis labels (time) and grid lines
+            const numXLabels = 5;
+            for (let i = 0; i < numXLabels; i++) {
+                const index = Math.floor(i * (data.length - 1) / (numXLabels - 1));
+                const time = data[index].time;
+                const x = padding + (time.getTime() - minTime) / (maxTime - minTime) * chartWidth;
+                ctx.fillStyle = '#64748b'; // slate-600
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'center';
+                const hours = String(time.getHours()).padStart(2, '0');
+                const minutes = String(time.getMinutes()).padStart(2, '0');
+                ctx.fillText(`${hours}:${minutes}`, x, ctx.canvas.height - padding + 20);
+
+                ctx.beginPath();
+                ctx.strokeStyle = '#e2e8f0'; // slate-200
+                ctx.lineWidth = 0.5;
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, ctx.canvas.height - padding);
+                ctx.stroke();
+            }
+
+            // Draw the line chart
+            ctx.beginPath();
+            ctx.strokeStyle = '#3b82f6'; // blue-500
+            ctx.lineWidth = 2;
+
+            data.forEach((d, i) => {
+                const x = padding + (d.time.getTime() - minTime) / (maxTime - minTime) * chartWidth;
+                const y = ctx.canvas.height - padding - (d.price - minPrice) / (maxPrice - minPrice) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+
+            // Add circle markers for each data point
+            ctx.fillStyle = '#3b82f6'; // blue-500
+            data.forEach(d => {
+                const x = padding + (d.time.getTime() - minTime) / (maxTime - minTime) * chartWidth;
+                const y = ctx.canvas.height - padding - (d.price - minPrice) / (maxPrice - minPrice) * chartHeight;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Redraw chart on window resize
+        window.addEventListener('resize', drawChart);
+
+        // Initial chart draw
+        window.onload = drawChart;
+    </script>
+</body>
+</html>
